@@ -22,25 +22,17 @@ public:
     }
 
     void finddist(){
-        if(child.empty()) return;
-
         max = sec = LLONG_MIN;
+        if(child.empty()) return;
+        
         for(auto it : child){
             if(it->max == LLONG_MIN || it->sec == LLONG_MIN){
-                if(it->child.empty()){
-                    modify(it->distance);
-                }else
-                    it->finddist();
-            }else{
-                long long temp1 = it->max + it->distance;
-                long long temp2 = it->sec + it->distance;
-                modify(temp1);
-                if(max != temp1 && sec != temp1) 
-                    modify(temp2);
+                it->finddist();
             }
-        }
 
-        //cout << max << " " << sec << endl;
+            long long temp = MAX(it->max + it->distance, it->distance);
+            modify(temp);
+        }
     }
 };
 
@@ -76,7 +68,10 @@ TN* makeNode(int pi, int ci, int di){
     parent->child.push_back(target);
     
     target->finddist();
-    if(!parflag) parent->finddist();
+    while(parent != nullptr && !parflag){
+        parent->finddist();
+        parent = parent->parent;
+    }
 }
 
 void deleteNode(int node){
@@ -115,6 +110,7 @@ void deleteNode(int node){
 void check(){
     path = LLONG_MIN;
     for(auto it : tree){
+        //cout << it->val << ": " << it->max << " " << it->sec << endl;
         if(it->max == LLONG_MIN){
             if(it->distance > path){
                 path = it->distance;
