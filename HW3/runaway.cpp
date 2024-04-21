@@ -17,12 +17,12 @@ public:
         if(value > max){
             sec = max;
             max = value;
-        }else if(value > sec && value != max)
+        }else if(value > sec)
             sec = value;
     }
 
     void finddist(){
-        max = sec = -1e9;
+        max = sec = -1e10;
         if(child.empty()) return;
         
         for(auto it : child){
