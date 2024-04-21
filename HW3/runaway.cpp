@@ -40,7 +40,6 @@ TN* root = nullptr;
 
 TN* makeNode(int pi, int ci, int di){
     TN *parent = nullptr, *target = nullptr;
-    int parflag = 0;
 
     for(int i=0; i<tree.size(); i++){
         if(tree[i]->val == pi) parent = tree[i];
@@ -50,7 +49,6 @@ TN* makeNode(int pi, int ci, int di){
     if(!parent){
         parent = new TN(pi, -1);
         tree.push_back(parent);
-        parflag = 1;
     }
 
     if(!target){
@@ -64,7 +62,7 @@ TN* makeNode(int pi, int ci, int di){
     parent->child.push_back(target);
     
     //target->finddist();
-    while(parent != nullptr && !parflag){
+    while(parent){
         parent->finddist();
         parent = parent->parent;
     }
@@ -95,7 +93,7 @@ void deleteNode(int node){
     tree.erase(next(tree.begin(), treeidx));
     parent->child.erase(next(parent->child.begin(), childidx));
     
-    while(parent != nullptr){
+    while(parent){
         parent->finddist();
         parent = parent->parent;
     }
