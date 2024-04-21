@@ -8,7 +8,7 @@ using namespace std;
 class TN{
 public:
     int val, distance;
-    long long max = LLONG_MIN, sec = LLONG_MIN;
+    long long max = -1e10, sec = -1e10;
     TN* parent = nullptr;
     vector<TN*> child;
 
@@ -22,14 +22,10 @@ public:
     }
 
     void finddist(){
-        max = sec = LLONG_MIN;
+        max = sec = -1e9;
         if(child.empty()) return;
         
         for(auto it : child){
-            if(it->max == LLONG_MIN || it->sec == LLONG_MIN){
-                it->finddist();
-            }
-
             long long temp = MAX(it->max + it->distance, it->distance);
             modify(temp);
         }
@@ -37,7 +33,7 @@ public:
 };
 
 int n, o, v, d;
-long long path = LLONG_MIN;
+long long path = -1e10;
 TN *rootPath = nullptr;
 vector<TN*> tree;
 TN* root = nullptr;
@@ -67,7 +63,7 @@ TN* makeNode(int pi, int ci, int di){
     target->parent = parent;
     parent->child.push_back(target);
     
-    target->finddist();
+    //target->finddist();
     while(parent != nullptr && !parflag){
         parent->finddist();
         parent = parent->parent;
@@ -108,20 +104,13 @@ void deleteNode(int node){
 }
 
 void check(){
-    path = LLONG_MIN;
+    path = -1e10;
     for(auto it : tree){
         //cout << it->val << ": " << it->max << " " << it->sec << endl;
-        if(it->max == LLONG_MIN){
-            if(it->distance > path){
-                path = it->distance;
-                rootPath = it;
-            }
-        }else{
-            long long temp = it->max + it->sec + it->distance;
-            if(temp > path){
-                path = temp;
-                rootPath = it;
-            }
+        long long temp = MAX(it->max + it->sec + it->distance, MAX(it->max + it->distance, it->distance));
+        if(temp > path){
+            path = temp;
+            rootPath = it;
         }
     }
 }
