@@ -37,6 +37,7 @@ public:
     void addEdge(int s, int d, int dis, int t){
         Edge* newedge = new Edge(s, d, dis, t);
         vertex[s]->road.push_back(newedge);
+        vertex[d]->road.push_back(newedge);
         edges.push_back(newedge);
     }
 };
