@@ -3,7 +3,6 @@
 #include <stack>
 #include <queue>
 #include <unordered_map>
-#include <algorithm>
 #include <climits>
 using namespace std;
 
@@ -26,10 +25,10 @@ public:
 class Order{
 public:
     vector<Edge*> path;
-    Vertex *driver, *src;
-    int ts, minpath;
+    Vertex *driver, *src, *dst;
+    int ts, minpath, id;
 
-    Order(Vertex* s, int t): src(s), ts(t){
+    Order(Vertex* s, int t, int i): src(s), ts(t), id(i){
         minpath = INT_MAX;
         path.clear();
     }
@@ -47,12 +46,13 @@ public:
     vector<Vertex*> vertex;
     vector<Edge*> edges;
     unordered_map<int, Order*> order;
+    vector<Order*> pending;
 
     Map():size(0){};
     Map(int s): size(s){
         vertex.resize(size+1, nullptr);
         for(int i=1; i<=size; ++i){
-            vertex[i] = new Vertex(i, -1);
+            vertex[i] = new Vertex(i, 0);
         }
     }
 
@@ -71,8 +71,7 @@ public:
         edges.push_back(newedge);
     }
 
-    void updateMap(vector<Edge*> path, int ts, Vertex* origin){
-        origin->dman--;
+    void updateMap(vector<Edge*> path, int ts){
         for(auto it : path){
             it->trafficnow += ts;
         }
@@ -89,6 +88,7 @@ public:
     int size;
     unordered_map<Vertex*, bool> visited;
     unordered_map<Vertex*, int> dist;
+    unordered_map<Vertex*, vector<Edge*>> path;
     Algo(int s, Map& m, Vertex* src): size(s){
         for(int i=1; i<=size; i++){
             visited[m[i]] = false;
@@ -98,6 +98,7 @@ public:
     }
 
     int minpath(Vertex* src, Vertex* target, int ts, Map& map){
+        if(src == nullptr) return INT_MAX;
         if(src == target) return dist[target];
 
         visited[src] = true;
@@ -110,6 +111,8 @@ public:
             int temp = dist[src] + road->dist;
             if(temp < dist[visit]){
                 dist[visit] = temp;
+                path[visit] = path[src];
+                path[visit].push_back(road);
             }
         }
 
@@ -119,7 +122,7 @@ public:
 
     Vertex* nextvisit(Map& map){
         int path = INT_MAX;
-        Vertex* next;
+        Vertex* next = nullptr;
 
         for(int i=1; i<=size; ++i){
             if(visited[map[i]]) continue;
@@ -171,7 +174,7 @@ void mindist(Vertex* src, Vertex* from, int dist, int ts, vector<Edge*> temppath
         if(road->traffic < road->trafficnow + ts) continue;
 
         temppath.push_back(road);
-        mindist(toward, src, ts, dist + road->dist, temppath);
+        mindist(toward, src, dist + road->dist, ts, temppath);
         temppath.pop_back();
     }
 }
@@ -180,8 +183,9 @@ void order(){
     int id, src, ts;
     cin >> id >> src >> ts;
 
-    map.order[id] = new Order(map[src], ts);
+    map.order[id] = new Order(map[src], ts, id);
     vector<Edge*> vect;
+    vect.clear();
 
     mintemp = INT_MAX;
     mindist(map[src], nullptr, 0, ts, vect);
@@ -189,28 +193,54 @@ void order(){
     if(mintemp != INT_MAX){
         map.order[id]->updateOrder(minpath, driverfrom, mintemp);
         cout << "Order " << id << " from: " << driverfrom->id << endl;
-        map.updateMap(minpath, ts, driverfrom);
+        driverfrom->dman--;
+        map.updateMap(minpath, ts);
     }else{
         cout << "Just walk. T-T\n";
+        delete map.order[id];
     }
 }
 
-void drop(){
-    int id, dst;
-    cin >> id >> dst;
-
-    Order* order = map.order[id];
+bool drop(Order* order){
     map.reverseMap(order->path, order->ts);
 
     Algo algo(map.size, map, order->src);
-    int path = algo.minpath(order->src, map[dst], order->ts, map);
-    cout << path << endl << order->minpath << endl;
-    cout << "Order " << id << " distance: " << path + order->minpath << endl;
+    int path = algo.minpath(order->src, order->dst, order->ts, map);
+    if(path == INT_MAX) return false;
+    else{
+        cout << "Order " << order->id << " distance: " << path + order->minpath << endl;
+        order->path = algo.path[order->dst];
+        map.updateMap(order->path, order->ts);
+        return true;
+    }
+}
+
+void placeorder(){
+    int id, dst;
+    cin >> id >> dst;
+
+    map.order[id]->dst = map[dst];
+    if(!drop(map.order[id])){
+        cout << "No Way Home\n";
+        map.pending.push_back(map.order[id]);
+    }
 }
 
 void complete(){
     int id;
     cin >> id;
+    Order* order = map.order[id];
+    map.reverseMap(order->path, order->ts);
+    order->dst->dman++;
+
+    delete order;
+    if(map.pending.empty()) return;
+
+    for(auto it = map.pending.begin(); it != map.pending.end(); ){
+        if(drop(*it)){
+            it = map.pending.erase(it);
+        }else ++it;
+    }
 }
 
 int main(){
@@ -224,7 +254,7 @@ int main(){
         if(op == "Order"){
             order();
         }else if(op == "Drop"){
-            drop();
+            placeorder();
         }else if(op == "Complete"){
             complete();
         }
