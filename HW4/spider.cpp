@@ -154,9 +154,11 @@ void initialMap(){
 }
 
 vector<Edge*> minpath;
+unordered_map<Vertex*, bool> visited;
 Vertex* driverfrom;
 int mintemp = INT_MAX;
 void mindist(Vertex* src, Vertex* from, int dist, int ts, vector<Edge*> temppath){
+    visited[src] = true;
     if(src->dman > 0){
         if(dist < mintemp || (dist == mintemp && temppath.size() < minpath.size())){
             mintemp = dist;
@@ -170,7 +172,7 @@ void mindist(Vertex* src, Vertex* from, int dist, int ts, vector<Edge*> temppath
         Vertex* toward = map[it.first];
         Edge* road = it.second;
         int temp;
-        if(toward == from) continue;
+        if(visited[toward]) continue;
         if(road->traffic < road->trafficnow + ts) continue;
 
         temppath.push_back(road);
@@ -186,6 +188,7 @@ void order(){
     map.order[id] = new Order(map[src], ts, id);
     vector<Edge*> vect;
     vect.clear();
+    visited.clear();
 
     mintemp = INT_MAX;
     mindist(map[src], nullptr, 0, ts, vect);
