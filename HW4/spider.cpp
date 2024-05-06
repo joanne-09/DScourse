@@ -147,6 +147,29 @@ public:
         }
         return next;
     }
+
+    Vertex* smallestdist(){
+        int mindist = INT_MAX;
+        Vertex* ret = nullptr;
+        for(auto it : dist){
+            if(it.first->dman <= 0) continue;
+
+            if(mindist > it.second){
+                mindist = it.second;
+                ret = it.first;
+            }else if(ret){
+                if(mindist == it.second && path[ret].size() > path[it.first].size()){
+                    mindist = it.second;
+                    ret = it.first;
+                }else if(mindist == it.second && path[ret].size() == path[it.first].size() && ret->id > it.first->id){
+                    mindist = it.second;
+                    ret = it.first;
+                }
+            }
+        }
+
+        return ret;
+    }
 };
 
 int V, E, D, C;
@@ -166,61 +189,22 @@ void initialMap(){
     }
 }
 
-vector<Edge*> minpath;
-Vertex* driverfrom;
-int mintemp = INT_MAX;
-void mindist(Vertex* src, Vertex* from, int dist, int ts, vector<Edge*> temppath){
-    if(src->dman > 0){
-        if(dist < mintemp || (dist == mintemp && temppath.size() < minpath.size()) || (dist == mintemp && temppath.size() == minpath.size() && src->id < driverfrom->id)){
-            mintemp = dist;
-            minpath = temppath;
-            driverfrom = src;
-        }
-        return;
-    }
-
-    for(auto it : src->road){
-        Vertex* toward = map[it.first];
-        Edge* road = it.second;
-
-        //cout << "src: " << src << " " << src->id << endl;
-        //if(from) cout << "from: " << from << " " << from->id << endl;
-        //cout << "to: " << toward << " " << toward->id << endl;
-        if(from == toward) continue;
-        if(road->traffic < road->trafficnow + ts) continue;
-
-        int flag = 0;
-        for(auto it : temppath){
-            if(it == road){
-                flag = 1;
-                break;
-            }
-        }
-
-        if(flag) continue;
-        
-        temppath.push_back(road);
-        mindist(toward, src, dist + road->dist, ts, temppath);
-        temppath.pop_back();
-    }
-}
-
 void order(){
     int id, src, ts;
     cin >> id >> src >> ts;
 
     map.order[id] = new Order(map[src], ts, id);
-    vector<Edge*> vect;
-    vect.clear();
+    Order* order = map.order[id];
 
-    mintemp = INT_MAX;
-    mindist(map[src], nullptr, 0, ts, vect);
+    Algo algo(map.size, map, map[src]);
+    algo.minpath(order->src, nullptr, order->ts, map);
+    Vertex* DL = algo.smallestdist();
     
-    if(mintemp != INT_MAX){
-        map.order[id]->updateOrder(minpath, driverfrom, mintemp);
-        cout << "Order " << id << " from: " << driverfrom->id << endl;
-        driverfrom->dman--;
-        map.updateMap(minpath, ts);
+    if(DL){
+        order->updateOrder(algo.path[DL], DL, algo.dist[DL]);
+        cout << "Order " << id << " from: " << DL->id << endl;
+        order->driver->dman--;
+        map.updateMap(order->path, ts);
     }else{
         cout << "Just walk. T-T\n";
         delete map.order[id];
