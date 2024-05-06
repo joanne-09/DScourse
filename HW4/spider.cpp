@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <stack>
+#include <queue>
 #include <unordered_map>
 #include <algorithm>
 #include <climits>
@@ -25,10 +26,10 @@ public:
 class Order{
 public:
     vector<Edge*> path;
-    Vertex* driver;
-    int src, ts, minpath;
+    Vertex *driver, *src;
+    int ts, minpath;
 
-    Order(int s, int t): src(s), ts(t){
+    Order(Vertex* s, int t): src(s), ts(t){
         minpath = INT_MAX;
         path.clear();
     }
@@ -42,12 +43,13 @@ public:
 
 class Map{
 public:
+    int size;
     vector<Vertex*> vertex;
     vector<Edge*> edges;
     unordered_map<int, Order*> order;
 
-    Map(){};
-    Map(int size){
+    Map():size(0){};
+    Map(int s): size(s){
         vertex.resize(size+1, nullptr);
         for(int i=1; i<=size; ++i){
             vertex[i] = new Vertex(i, -1);
@@ -74,6 +76,60 @@ public:
         for(auto it : path){
             it->trafficnow += ts;
         }
+    }
+
+    void reverseMap(vector<Edge*> path, int ts){
+        for(auto it : path)
+            it->trafficnow -= ts;
+    }
+};
+
+class Algo{
+public:
+    int size;
+    unordered_map<Vertex*, bool> visited;
+    unordered_map<Vertex*, int> dist;
+    Algo(int s, Map& m, Vertex* src): size(s){
+        for(int i=1; i<=size; i++){
+            visited[m[i]] = false;
+            dist[m[i]] = INT_MAX;
+        }
+        dist[src] = 0;
+    }
+
+    int minpath(Vertex* src, Vertex* target, int ts, Map& map){
+        if(src == target) return dist[target];
+
+        visited[src] = true;
+        for(auto it : src->road){
+            Vertex* visit = map[it.first];
+            Edge* road = it.second;
+
+            if(road->traffic < road->trafficnow + ts) continue;
+
+            int temp = dist[src] + road->dist;
+            if(temp < dist[visit]){
+                dist[visit] = temp;
+            }
+        }
+
+        Vertex* next = nextvisit(map);
+        return minpath(next, target, ts, map);
+    }
+
+    Vertex* nextvisit(Map& map){
+        int path = INT_MAX;
+        Vertex* next;
+
+        for(int i=1; i<=size; ++i){
+            if(visited[map[i]]) continue;
+            
+            if(path > dist[map[i]]){
+                path = dist[map[i]];
+                next = map[i];
+            }            
+        }
+        return next;
     }
 };
 
@@ -124,7 +180,7 @@ void order(){
     int id, src, ts;
     cin >> id >> src >> ts;
 
-    map.order[id] = new Order(src, ts);
+    map.order[id] = new Order(map[src], ts);
     vector<Edge*> vect;
 
     mintemp = INT_MAX;
@@ -142,6 +198,14 @@ void order(){
 void drop(){
     int id, dst;
     cin >> id >> dst;
+
+    Order* order = map.order[id];
+    map.reverseMap(order->path, order->ts);
+
+    Algo algo(map.size, map, order->src);
+    int path = algo.minpath(order->src, map[dst], order->ts, map);
+    cout << path << endl << order->minpath << endl;
+    cout << "Order " << id << " distance: " << path + order->minpath << endl;
 }
 
 void complete(){
