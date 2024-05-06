@@ -81,6 +81,19 @@ public:
         for(auto it : path)
             it->trafficnow -= ts;
     }
+
+    void sortpending(){
+        int size = pending.size();
+        for(int i=0; i<size; ++i){
+            for(int j=i+1; j<size; ++j){
+                if(pending[j]->id < pending[i]->id){
+                    Order* temp = pending[j];
+                    pending[j] = pending[i];
+                    pending[i] = temp;
+                }
+            }
+        }
+    }
 };
 
 class Algo{
@@ -109,7 +122,7 @@ public:
             if(road->traffic < road->trafficnow + ts) continue;
 
             int temp = dist[src] + road->dist;
-            if(temp < dist[visit]){
+            if(temp < dist[visit] || (temp == dist[visit] && path[src].size() +1 < path[visit].size())){
                 dist[visit] = temp;
                 path[visit] = path[src];
                 path[visit].push_back(road);
@@ -160,7 +173,7 @@ int mintemp = INT_MAX;
 void mindist(Vertex* src, Vertex* from, int dist, int ts, vector<Edge*> temppath){
     visited[src] = true;
     if(src->dman > 0){
-        if(dist < mintemp || (dist == mintemp && temppath.size() < minpath.size())){
+        if(dist < mintemp || (dist == mintemp && temppath.size() < minpath.size()) || (dist == mintemp && temppath.size() == minpath.size() && src->id < driverfrom->id)){
             mintemp = dist;
             minpath = temppath;
             driverfrom = src;
@@ -239,6 +252,7 @@ void complete(){
     delete order;
     if(map.pending.empty()) return;
 
+    map.sortpending();
     for(auto it = map.pending.begin(); it != map.pending.end(); ){
         if(drop(*it)){
             it = map.pending.erase(it);
