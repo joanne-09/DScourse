@@ -148,22 +148,20 @@ public:
         return next;
     }
 
-    Vertex* smallestdist(){
+    Vertex* smallestdist(Map& map){
         int mindist = INT_MAX;
         Vertex* ret = nullptr;
-        for(auto it : dist){
-            if(it.first->dman <= 0) continue;
 
-            if(mindist > it.second){
-                mindist = it.second;
-                ret = it.first;
+        for(int i=1; i<=size; ++i){
+            if(map[i]->dman <= 0) continue;
+
+            if(mindist > dist[map[i]]){
+                mindist = dist[map[i]];
+                ret = map[i];
             }else if(ret){
-                if(mindist == it.second && path[ret].size() > path[it.first].size()){
-                    mindist = it.second;
-                    ret = it.first;
-                }else if(mindist == it.second && path[ret].size() == path[it.first].size() && ret->id > it.first->id){
-                    mindist = it.second;
-                    ret = it.first;
+                if(mindist == dist[map[i]] && path[ret].size() > path[map[i]].size()){
+                    mindist = dist[map[i]];
+                    ret = map[i];
                 }
             }
         }
@@ -198,7 +196,7 @@ void order(){
 
     Algo algo(map.size, map, map[src]);
     algo.minpath(order->src, nullptr, order->ts, map);
-    Vertex* DL = algo.smallestdist();
+    Vertex* DL = algo.smallestdist(map);
     
     if(DL){
         order->updateOrder(algo.path[DL], DL, algo.dist[DL]);

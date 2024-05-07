@@ -12,6 +12,7 @@
         "vector": "cpp",
         "xstring": "cpp",
         "xutility": "cpp",
-        "list": "cpp"
+        "list": "cpp",
+        "unordered_map": "cpp"
     }
 }
