@@ -10,14 +10,13 @@ class Edge{
 public:
     int src, dest, dist, traffic, trafficnow = 0;
 
-    Edge(int s, int d, int dis, int t): src(s), dest(d), dist(dis), traffic(t){};
+    Edge(int s, int d, int dis, int t): src(s), dest(d), dist(dis), traffic(t), trafficnow(0){};
 
 };
 
 class Vertex{
 public:
     int id, dman;
-    unordered_map<int, Edge*> road;
 
     Vertex(int v, int c): id(v), dman(c){};
 };
@@ -25,7 +24,7 @@ public:
 class Order{
 public:
     vector<Edge*> path;
-    Vertex *driver, *src, *dst;
+    Vertex *src, *dst;
     int ts, minpath, id;
 
     Order(Vertex* s, int t, int i): src(s), ts(t), id(i){
@@ -33,26 +32,28 @@ public:
         path.clear();
     }
 
-    void updateOrder(vector<Edge*> p, Vertex* d, int pa){
+    void updateOrder(vector<Edge*> p, int pa){
         path = p;
-        driver = d;
         minpath = pa;
     }
 };
 
 class Map{
 public:
-    int size;
+    int size, edge, pend = 0;
     vector<Vertex*> vertex;
-    vector<Edge*> edges;
+    vector<vector<Edge*>> edges;
     unordered_map<int, Order*> order;
-    vector<Order*> pending;
+    vector<bool> pending;
 
-    Map():size(0){};
-    Map(int s): size(s){
-        vertex.resize(size+1, nullptr);
+    Map():size(105){};
+    Map(int s, int e): size(s), edge(e){
+        vertex.resize(size+5, nullptr);
+        edges.resize(size+5);
+        pending.resize(105, false);
         for(int i=1; i<=size; ++i){
             vertex[i] = new Vertex(i, 0);
+            edges[i].resize(size+5, nullptr);
         }
     }
 
@@ -66,9 +67,7 @@ public:
 
     void addEdge(int s, int d, int dis, int t){
         Edge* newedge = new Edge(s, d, dis, t);
-        vertex[s]->road[d] = newedge;
-        vertex[d]->road[s] = newedge;
-        edges.push_back(newedge);
+        edges[s][d] = edges[d][s] = newedge;
     }
 
     void updateMap(vector<Edge*> path, int ts){
@@ -81,33 +80,28 @@ public:
         for(auto it : path)
             it->trafficnow -= ts;
     }
-
-    void sortpending(){
-        int size = pending.size();
-        for(int i=0; i<size; ++i){
-            for(int j=i+1; j<size; ++j){
-                if(pending[j]->id < pending[i]->id){
-                    Order* temp = pending[j];
-                    pending[j] = pending[i];
-                    pending[i] = temp;
-                }
-            }
-        }
-    }
 };
 
 class Algo{
 public:
     int size;
+    Vertex* candidate;
+    vector<Edge*> cpath;
     unordered_map<Vertex*, bool> visited;
     unordered_map<Vertex*, int> dist;
     unordered_map<Vertex*, vector<Edge*>> path;
-    Algo(int s, Map& m, Vertex* src): size(s){
+
+    void init(int s, Map& m, Vertex* src){
+        size = s;
         for(int i=1; i<=size; i++){
             visited[m[i]] = false;
             dist[m[i]] = INT_MAX;
         }
         dist[src] = 0;
+        path[src].clear();
+        if(src->dman > 0) candidate = src;
+        else candidate = nullptr;
+        cpath.clear();
     }
 
     int minpath(Vertex* src, Vertex* target, int ts, Map& map){
@@ -115,17 +109,25 @@ public:
         if(src == target) return dist[target];
 
         visited[src] = true;
-        for(auto it : src->road){
-            Vertex* visit = map[it.first];
-            Edge* road = it.second;
+        for(int i=1; i<=size; ++i){
+            if(!map.edges[src->id][i]) continue;
+            Vertex* visit = map[i];
+            Edge* road = map.edges[src->id][i];
 
             if(road->traffic < road->trafficnow + ts) continue;
 
             int temp = dist[src] + road->dist;
-            if(temp < dist[visit] || (temp == dist[visit] && path[src].size() +1 < path[visit].size())){
+            if(temp < dist[visit]){
                 dist[visit] = temp;
                 path[visit] = path[src];
                 path[visit].push_back(road);
+            }
+
+            if(visit->dman > 0){
+                if(!candidate || dist[candidate] > dist[visit]){
+                    candidate = visit;
+                    cpath = path[candidate];
+                }
             }
         }
 
@@ -148,25 +150,24 @@ public:
         return next;
     }
 
-    Vertex* smallestdist(Map& map){
-        int mindist = INT_MAX;
-        Vertex* ret = nullptr;
-
+    void check(Map& map){
         for(int i=1; i<=size; ++i){
-            if(map[i]->dman <= 0) continue;
-
-            if(mindist > dist[map[i]]){
-                mindist = dist[map[i]];
-                ret = map[i];
-            }else if(ret){
-                if(mindist == dist[map[i]] && path[ret].size() > path[map[i]].size()){
-                    mindist = dist[map[i]];
-                    ret = map[i];
-                }
+            cout << "vertex " << i << " :" << endl;
+            cout << "  distance: " << dist[map[i]] << endl;
+            cout << "  path: ";
+            for(auto it : path[map[i]]){
+                cout << it->src << "->" << it->dest << "  ";
             }
+            cout << endl;
         }
+        cout << endl;
 
-        return ret;
+        if(candidate){
+            cout << candidate->id << ": " << dist[candidate] << endl;
+            for(auto it : cpath){
+                cout << it->src << " " << it->dest << endl;
+            }
+        }   
     }
 };
 
@@ -175,15 +176,16 @@ int v, c, s, d, dis, t;
 string op;
 
 Map map;
+Algo algo;
 void initialMap(){
-    map = Map(V);
+    map = Map(V, E);
     while(D--){
         cin >> op >> v >> c;
-        map.placeDman(v, c);
+        if(op == "PLACE") map.placeDman(v, c);
     }
     while(E--){
         cin >> op >> s >> d >> dis >> t;
-        map.addEdge(s, d, dis, t);
+        if(op == "EDGE") map.addEdge(s, d, dis, t);
     }
 }
 
@@ -192,33 +194,30 @@ void order(){
     cin >> id >> src >> ts;
 
     map.order[id] = new Order(map[src], ts, id);
-    Order* order = map.order[id];
 
-    Algo algo(map.size, map, map[src]);
-    algo.minpath(order->src, nullptr, order->ts, map);
-    Vertex* DL = algo.smallestdist(map);
+    algo.init(map.size, map, map[src]);
+    algo.minpath(map.order[id]->src, nullptr, map.order[id]->ts, map);
     
-    if(DL){
-        order->updateOrder(algo.path[DL], DL, algo.dist[DL]);
-        cout << "Order " << id << " from: " << DL->id << endl;
-        order->driver->dman--;
-        map.updateMap(order->path, ts);
+    if(algo.candidate){
+        algo.cpath = algo.path[algo.candidate];
+        map.order[id]->updateOrder(algo.cpath, algo.dist[algo.candidate]);
+        cout << "Order " << id << " from: " << algo.candidate->id << endl;
+        algo.candidate->dman--;
+        map.updateMap(map.order[id]->path, ts);
     }else{
         cout << "Just walk. T-T\n";
-        delete map.order[id];
+        //delete map.order[id];
     }
 }
 
-bool drop(Order* order){
-    map.reverseMap(order->path, order->ts);
-
-    Algo algo(map.size, map, order->src);
-    int path = algo.minpath(order->src, order->dst, order->ts, map);
+bool drop(int id){
+    algo.init(map.size, map, map.order[id]->src);
+    int path = algo.minpath(map.order[id]->src, map.order[id]->dst, map.order[id]->ts, map);
     if(path == INT_MAX) return false;
     else{
-        cout << "Order " << order->id << " distance: " << path + order->minpath << endl;
-        order->path = algo.path[order->dst];
-        map.updateMap(order->path, order->ts);
+        cout << "Order " << map.order[id]->id << " distance: " << path + map.order[id]->minpath << endl;
+        map.order[id]->path = algo.path[map.order[id]->dst];
+        map.updateMap(map.order[id]->path, map.order[id]->ts);
         return true;
     }
 }
@@ -228,9 +227,11 @@ void placeorder(){
     cin >> id >> dst;
 
     map.order[id]->dst = map[dst];
-    if(!drop(map.order[id])){
+    map.reverseMap(map.order[id]->path, map.order[id]->ts);
+    if(!drop(id)){
         cout << "No Way Home\n";
-        map.pending.push_back(map.order[id]);
+        map.pending[id] = true;
+        map.pend++;
     }
 }
 
@@ -241,14 +242,15 @@ void complete(){
     map.reverseMap(order->path, order->ts);
     order->dst->dman++;
 
-    delete order;
-    if(map.pending.empty()) return;
+    //delete order;
+    if(map.pend == 0) return;
 
-    map.sortpending();
-    for(auto it = map.pending.begin(); it != map.pending.end(); ){
-        if(drop(*it)){
-            it = map.pending.erase(it);
-        }else ++it;
+    for(int i=0; i<=100; ++i){
+        if(!map.pending[i]) continue;
+        if(drop(i)){
+            map.pending[i] = false;
+            map.pend--;
+        }
     }
 }
 
