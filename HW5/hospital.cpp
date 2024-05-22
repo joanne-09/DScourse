@@ -4,50 +4,15 @@
 #include <sstream>
 using namespace std;
 
-class Date{
-    public:
-    int year = 0, month = 0, day = 0;
-
-    Date(){}
-    Date(string str){
-        if(str == "NaN"){
-            year = month = day = 0;
-            return;
-        }
-        
-        string s;
-        stringstream ss(str);
-
-        getline(ss, s, '-');
-        year = stoi(s);
-        getline(ss, s, '-');
-        month = stoi(s);
-        getline(ss, s, '-');
-        day = stoi(s);
-    }
-
-    int operator>(const Date& date){
-        if(year != date.year){
-            return year > date.year ? 1 : -1;
-        }else if(month != date.month){
-            return month > date.month ? 1 : -1;
-        }else if(day != date.day){
-            return day > date.day ? 1 : -1;
-        }
-
-        return 0;
-    }
-};
-
 class Patient{
 public:
     string name;
-    Date date;
+    string date;
     int age, money, membership, insertidx;
 
     Patient(){}
     Patient(string nam, int ag, int mon, int mem, string da, int idx): name(nam) , age(ag), money(mon), membership(mem), insertidx(idx){
-        date = Date(da);
+        date = da;
     }
 };
 
@@ -57,15 +22,14 @@ int N, M, P, X, K, idx = 0;
 int ag, mon, mem;
 string nam, da;
 vector<Patient> treatlist;
-vector<vector<Patient>::iterator> sorting;
 vector<Patient> Pandahospital;
 
 // if right has higher priority than left, return true
 bool pandasort(Patient& left, Patient& right){
     if(left.membership != right.membership){
         return left.membership < right.membership;
-    }else if(left.date > right.date != 0){
-        return left.date > right.date == 1;
+    }else if(left.date != right.date){
+        return left.date > right.date;
     }else if(left.name != right.name){
         return left.name > right.name;
     }else{
@@ -113,9 +77,10 @@ void heapsort(vector<Patient>& hospital){
 
 long long output(vector<Patient>& hospital){
     long long income = 0;
-    for(int i=0; i<hospital.size(); ++i){
-        income += hospital[i].money * 0.9;
-        cout << hospital[i].name << " " << hospital[i].age << endl;
+    for(auto& it : hospital){
+        income += it.money * 0.9;
+        cout << it.name << " " << it.age << endl;
+        //cout << it.money << " " << it.membership << endl;
     }
 
     return income;
