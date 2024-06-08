@@ -29,8 +29,10 @@ vector<long long> dfs(int from, int src, int target1, int target2){
         visited[cur.first] = true;
 
         for(auto& it : c.edges[cur.first]){
-            if(it.first == target1 && cur.second+it.second < temp[0]) temp[0] = cur.second+it.second;
-            if(it.first == target2 && cur.second+it.second < temp[1]) temp[1] = cur.second+it.second; 
+            if(it.first == target1 && cur.second+it.second < temp[0]) 
+                temp[0] = cur.second+it.second;
+            if(it.first == target2 && cur.second+it.second < temp[1]) 
+                temp[1] = cur.second+it.second; 
             
             stk.emplace(it.first, cur.second+it.second);
         }
